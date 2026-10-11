@@ -1,0 +1,72 @@
+name: Build DJPlayer
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_15.0.app/Contents/Developer
+      
+    - name: Build DJPlayer
+      run: swift build -c release
+      
+    - name: Create app bundle
+      run: |
+        # Create app bundle structure
+        mkdir -p DJPlayer.app/Contents/MacOS
+        mkdir -p DJPlayer.app/Contents/Resources
+        
+        # Copy executable
+        cp .build/release/DJPlayer DJPlayer.app/Contents/MacOS/
+        
+        # Create Info.plist
+        cat > DJPlayer.app/Contents/Info.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>DJPlayer</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.djplayer.app</string>
+            <key>CFBundleName</key>
+            <string>DJPlayer</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>13.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+            <key>NSSupportsAutomaticGraphicsSwitching</key>
+            <true/>
+        </dict>
+        </plist>
+        EOF
+        
+        # Create PkgInfo
+        echo "APPL????" > DJPlayer.app/Contents/PkgInfo
+        
+    - name: Zip app bundle
+      run: zip -r DJPlayer.app.zip DJPlayer.app
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DJPlayer-macOS
+        path: DJPlayer.app.zip
+        retention-days: 30
